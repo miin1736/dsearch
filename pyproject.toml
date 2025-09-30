@@ -1,0 +1,197 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "dsearch-api"
+version = "2.0.0"
+description = "Korean Enterprise Document Search Platform API"
+authors = [
+    {name = "Dsearch Team", email = "support@dsearch.com"}
+]
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+keywords = ["fastapi", "elasticsearch", "korean", "search", "documents"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Framework :: FastAPI",
+    "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
+]
+
+dependencies = [
+    "fastapi==0.104.1",
+    "uvicorn[standard]==0.24.0",
+    "pydantic==2.5.0",
+    "pydantic-settings==2.1.0",
+    "httpx==0.25.2",
+    "aiohttp==3.9.1",
+    "aiofiles==23.2.0",
+    "sqlalchemy==2.0.23",
+    "alembic==1.13.0",
+    "asyncpg==0.29.0",
+    "psycopg2-binary==2.9.9",
+    "elasticsearch==8.18.0",
+    "elasticsearch-dsl==8.18.0",
+    "redis==5.0.1",
+    "hiredis==2.2.3",
+    "python-jose[cryptography]==3.3.0",
+    "passlib[bcrypt]==1.7.4",
+    "python-multipart==0.0.6",
+    "sentence-transformers==2.2.2",
+    "transformers==4.36.0",
+    "torch==2.1.1",
+    "numpy==1.24.4",
+    "scikit-learn==1.3.2",
+    "openai==1.6.1",
+    "konlpy==0.6.0",
+    "soynlp==0.0.493",
+    "beautifulsoup4==4.12.2",
+    "lxml==4.9.3",
+    "python-docx==1.1.0",
+    "pypdf2==3.0.1",
+    "openpyxl==3.1.2",
+    "python-magic==0.4.27",
+    "apscheduler==3.10.4",
+    "celery==5.3.4",
+    "loguru==0.7.2",
+    "prometheus-client==0.19.0",
+    "pathlib2==2.3.7",
+    "python-dateutil==2.8.2",
+    "pytz==2023.3",
+    "click==8.1.7",
+    "orjson==3.9.10",
+    "msgpack==1.0.7",
+    "gunicorn==21.2.0",
+    "supervisor==4.2.5",
+    "python-dotenv==1.0.0",
+    "python-cors==1.0.0",
+    "filetype==1.2.0",
+    "pyicu==2.12",
+    "pymupdf==1.23.8",
+    "pillow==10.1.0",
+    "dramatiq==1.15.0",
+    "dramatiq[redis]==1.15.0",
+    "psutil==5.9.6",
+    "aiocache==0.12.2",
+    "validators==0.22.0",
+    "email-validator==2.1.0",
+    "hanja==0.13.4",
+    "jamo==0.4.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==7.4.3",
+    "pytest-asyncio==0.21.1",
+    "pytest-cov==4.1.0",
+    "black==23.11.0",
+    "isort==5.12.0",
+    "flake8==6.1.0",
+    "mypy>=1.5.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/company/dsearch-api"
+Documentation = "https://docs.dsearch.com"
+Repository = "https://github.com/company/dsearch-api"
+"Bug Tracker" = "https://github.com/company/dsearch-api/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["app*"]
+exclude = ["tests*"]
+
+[tool.black]
+line-length = 100
+target-version = ['py311', 'py312']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+ensure_newline_before_comments = true
+line_length = 100
+
+[tool.flake8]
+max-line-length = 100
+extend-ignore = ["E203", "E266", "E501", "W503", "F403", "F401"]
+max-complexity = 10
+select = ["B", "C", "E", "F", "W", "T4", "B9"]
+
+[tool.mypy]
+python_version = "3.11"
+check_untyped_defs = true
+disallow_any_generics = true
+disallow_incomplete_defs = true
+disallow_untyped_defs = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_return_any = true
+strict_optional = true
+
+[[tool.mypy.overrides]]
+module = [
+    "elasticsearch.*",
+    "sentence_transformers.*",
+    "openai.*",
+    "redis.*",
+    "apscheduler.*"
+]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_functions = "test_*"
+addopts = [
+    "-v",
+    "--tb=short",
+    "--strict-markers",
+    "--asyncio-mode=auto"
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests"
+]
+
+[tool.coverage.run]
+source = ["app"]
+omit = ["*/tests/*", "*/__pycache__/*", "*/venv/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+]

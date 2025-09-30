@@ -1,0 +1,86 @@
+version: '3.8'
+
+services:
+  # FastAPI Application (로컬 Elasticsearch 연결용)
+  app:
+    build: .
+    container_name: dsearch_api_local_es
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=false
+      - DATABASE_URL=postgresql+asyncpg://dsearch:dsearch123@postgres:5432/dsearch
+      - ELASTICSEARCH_URLS=http://host.docker.internal:9200  # 로컬 ES 연결
+      - REDIS_URL=redis://redis:6379/0
+      - DEPLOYMENT_MODE=local_es
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ./media:/app/media
+      - ./logs:/app/logs
+      - ./offline_packages:/app/offline_packages:ro
+    restart: unless-stopped
+    networks:
+      - dsearch-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"  # 로컬 ES 접근을 위한 설정
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15
+    container_name: dsearch_postgres_local_es
+    environment:
+      POSTGRES_DB: dsearch
+      POSTGRES_USER: dsearch
+      POSTGRES_PASSWORD: dsearch123
+    volumes:
+      - postgres_data_local:/var/lib/postgresql/data
+      - ./init_sql:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "5433:5432"  # 로컬 PostgreSQL과 충돌 방지
+    restart: unless-stopped
+    networks:
+      - dsearch-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dsearch"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis
+  redis:
+    image: redis:7-alpine
+    container_name: dsearch_redis_local_es
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data_local:/data
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    ports:
+      - "6380:6379"  # 로컬 Redis와 충돌 방지
+    restart: unless-stopped
+    networks:
+      - dsearch-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data_local:
+    driver: local
+  redis_data_local:
+    driver: local
+
+networks:
+  dsearch-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16

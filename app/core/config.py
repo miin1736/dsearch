@@ -17,8 +17,8 @@ class Settings(BaseSettings):
     """
 
     # Application
-    APP_NAME: str = "Dsearch API"
-    VERSION: str = "2.0.0"
+    APP_NAME: str = Field(default="Dsearch API", env="APP_NAME")
+    VERSION: str = Field(default="2.0.0", env="VERSION")
     DEBUG: bool = Field(default=False, env="DEBUG")
     HOST: str = Field(default="0.0.0.0", env="HOST")
     PORT: int = Field(default=8000, env="PORT")
@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     SUPER_KEY: str = Field(default="xlLVg89YUMim03SZ", env="SUPER_KEY")
 
     # Database
-    DATABASE_URL: str = Field(env="DATABASE_URL", default="sqlite:///./dsearch.db")
+    DATABASE_URL: str = Field(default="sqlite:///./dsearch.db", env="DATABASE_URL")
 
     # Elasticsearch
     ELASTICSEARCH_URLS: List[str] = Field(env="ELASTICSEARCH_URLS")
@@ -37,18 +37,20 @@ class Settings(BaseSettings):
     ELASTICSEARCH_PASSWORD: str = Field(env="ELASTICSEARCH_PASSWORD")
     ELASTICSEARCH_VERIFY_CERTS: bool = Field(default=False, env="ELASTICSEARCH_VERIFY_CERTS")
     ELASTICSEARCH_TIMEOUT: int = Field(default=60, env="ELASTICSEARCH_TIMEOUT")
+    ELASTICSEARCH_BULK_SIZE: int = Field(default=1000, env="ELASTICSEARCH_BULK_SIZE")
 
     # Redis
-    REDIS_URL: str = Field(env="REDIS_URL", default="redis://localhost:6379/0")
+    REDIS_URL: str = Field(default="redis://localhost:6379/0", env="REDIS_URL")
     REDIS_PASSWORD: Optional[str] = Field(default=None, env="REDIS_PASSWORD")
+    REDIS_MAX_CONNECTIONS: int = Field(default=20, env="REDIS_MAX_CONNECTIONS")
 
     # OpenAI
     OPENAI_API_KEY: Optional[str] = Field(default=None, env="OPENAI_API_KEY")
     OPENAI_MODEL: str = Field(default="gpt-3.5-turbo", env="OPENAI_MODEL")
 
     # File Storage
-    MEDIA_ROOT: str = Field(default="media", env="MEDIA_ROOT")
-    STATIC_ROOT: str = Field(default="static", env="STATIC_ROOT")
+    MEDIA_ROOT: str = Field(default="./media", env="MEDIA_ROOT")
+    STATIC_ROOT: str = Field(default="./static", env="STATIC_ROOT")
 
     # Search Configuration
     SEARCH_FIELDS: List[str] = Field(
@@ -58,13 +60,14 @@ class Settings(BaseSettings):
 
     # Logging
     LOG_LEVEL: str = Field(default="INFO", env="LOG_LEVEL")
-    LOG_DIR: str = Field(default="/home/logs", env="LOG_DIR")
+    LOG_DIR: str = Field(default="./logs", env="LOG_DIR")
 
     # ML Models
     SENTENCE_TRANSFORMER_MODEL: str = Field(
         default="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
         env="SENTENCE_TRANSFORMER_MODEL"
     )
+    VECTOR_DIMENSION: int = Field(default=384, env="VECTOR_DIMENSION")
 
     # Batch Processing
     BATCH_SIZE: int = Field(default=100, env="BATCH_SIZE")
@@ -73,6 +76,10 @@ class Settings(BaseSettings):
     # Korean Language
     LANGUAGE_CODE: str = Field(default="ko", env="LANGUAGE_CODE")
     TIME_ZONE: str = Field(default="Asia/Seoul", env="TIME_ZONE")
+
+    # Monitoring and Health Checks
+    HEALTH_CHECK_INTERVAL: int = Field(default=30, env="HEALTH_CHECK_INTERVAL")
+    METRICS_ENABLED: bool = Field(default=True, env="METRICS_ENABLED")
 
     class Config:
         env_file = ".env"

@@ -4,7 +4,7 @@ OpenAI GPT Integration Service
 
 from typing import List, Dict, Any, Optional, AsyncGenerator
 from openai import AsyncOpenAI
-
+import logging
 from app.core.config import settings
 
 logger = logging.getLogger("ds")
@@ -51,3 +51,4 @@ class OpenAIService:
 
 # Global instance
 openai_service = OpenAIService()
+

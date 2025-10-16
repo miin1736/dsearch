@@ -6,15 +6,17 @@ import asyncio
 from typing import Dict, Any, Optional, List
 from datetime import datetime
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from apscheduler.jobstores.redis import RedisJobStore
-from apscheduler.executors.pool import ThreadPoolExecutor
+from apscheduler.jobstores.memory import MemoryJobStore
+from apscheduler.executors.asyncio import AsyncIOExecutor
 import logging
 
 from app.core.config import settings
 from app.models.batch import JobSchedule, BatchJobCreate, BatchJobType
+from ..elasticsearch import ElasticsearchService
+from .document_processor import DocumentProcessor
 from .batch_service import batch_service
 
-logger = logging.getLogger("batch")
+logger = logging.getLogger("ds")
 
 
 class JobScheduler:
@@ -29,17 +31,12 @@ class JobScheduler:
         try:
             # Configure job stores
             jobstores = {
-                'default': RedisJobStore(
-                    host=settings.REDIS_URL.split('//')[1].split(':')[0],
-                    port=int(settings.REDIS_URL.split(':')[-1].split('/')[0]),
-                    db=1,  # Use different database for scheduler
-                    password=settings.REDIS_PASSWORD
-                )
+                'default': MemoryJobStore()
             }
 
             # Configure executors
             executors = {
-                'default': ThreadPoolExecutor(max_workers=settings.MAX_WORKERS),
+                'default': AsyncIOExecutor(),
             }
 
             job_defaults = {
@@ -331,3 +328,14 @@ class JobScheduler:
 
 # Global instance
 job_scheduler = JobScheduler()
+
+"""
+Services module initialization
+"""
+from ..elasticsearch import ElasticsearchService
+from ..search.vector_service import VectorService
+from ..search.search_service import SearchService
+# 추가 서비스 import (필요 시)
+# from .redis.redis_service import redis_service
+# from .redis.cache_service import cache_service
+# from .ml.openai_service import openai_service

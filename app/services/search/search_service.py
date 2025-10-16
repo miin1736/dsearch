@@ -1,6 +1,7 @@
 """
 Main Search Service
 """
+import logging
 from typing import List, Dict, Any, Optional, Tuple
 from elasticsearch import Elasticsearch
 from elasticsearch_dsl import Search, Q, A

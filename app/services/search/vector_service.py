@@ -1,6 +1,8 @@
 """
 Vector Search Service
 """
+
+import logging
 from typing import List, Dict, Any, Optional
 from sentence_transformers import SentenceTransformer
 from elasticsearch_dsl import Search, Q
@@ -16,7 +18,7 @@ class VectorService:
     """벡터 검색 및 유사도 서비스 클래스."""
 
     def __init__(self):
-        self.model = SentenceTransformer(settings.VECTOR_MODEL_NAME)
+        self.model = SentenceTransformer(settings.SENTENCE_TRANSFORMER_MODEL)
 
     async def encode_query(self, query: str) -> List[float]:
         """쿼리를 벡터로 인코딩합니다."""

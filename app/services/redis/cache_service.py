@@ -3,7 +3,7 @@ Caching Service using Redis
 """
 from typing import Any, Optional, Callable
 from functools import wraps
-
+import logging
 from .redis_service import redis_service
 
 logger = logging.getLogger("ds")

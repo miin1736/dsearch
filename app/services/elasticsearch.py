@@ -2,10 +2,10 @@
 Elasticsearch Connection and Basic Operations
 """
 
+import logging
 from typing import List, Dict, Any, Optional
 from elasticsearch import Elasticsearch
 from elasticsearch_dsl import connections
-import logging
 
 from app.core.config import settings
 
@@ -22,7 +22,12 @@ class ElasticsearchService:
     def _initialize_connection(self):
         """Elasticsearch 연결을 초기화합니다."""
         try:
-            self.client = Elasticsearch(settings.ELASTICSEARCH_URL)
+            self.client = Elasticsearch(
+                hosts=settings.ELASTICSEARCH_URLS,  # 수정: ELASTICSEARCH_URL -> ELASTICSEARCH_URLS (리스트 사용)
+                http_auth=(settings.ELASTICSEARCH_USERNAME, settings.ELASTICSEARCH_PASSWORD),
+                verify_certs=settings.ELASTICSEARCH_VERIFY_CERTS,
+                timeout=settings.ELASTICSEARCH_TIMEOUT
+            )
             connections.add_connection('default', self.client)
         except Exception as e:
             logger.error(f"Elasticsearch connection failed: {e}")

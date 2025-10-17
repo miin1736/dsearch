@@ -10,12 +10,16 @@ import logging
 from app.core.security import get_current_user
 from app.models.search import (
     SearchQuery, SearchResult, VectorSearchQuery, SimilarDocumentQuery,
-    AutoCompleteQuery, AutoCompleteResult, DocumentModel
+    AutoCompleteQuery, AutoCompleteResult, DocumentModel, AutoCompleteAddRequest,
+    AutoCompleteAddResponse, TypoCorrectionQuery, TypoSuggestion, TypoCorrectionResult,
+    TypoCorrectionAddRequest, TypoCorrectionAddResponse
 )
 from app.models.base import ResponseModel, PaginatedResponse
 from app.services.search import SearchService, VectorService
 from app.services.search.text_analyzer import TextAnalyzer
 from app.utils.file_handler import FileHandler
+from app.services.search.autocomplete_service import autocomplete_service
+from app.services.search.typo_correction_service import typo_correction_service
 
 logger = logging.getLogger("ds")
 
@@ -459,4 +463,164 @@ async def export_search_results(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Exporting search results failed: {str(e)}"
+        )
+
+
+@router.post("/autocomplete/add", response_model=AutoCompleteAddResponse)
+async def add_autocomplete_keyword(
+    request: AutoCompleteAddRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    자동완성 키워드를 추가합니다.
+    
+    ds_autocomplete 인덱스에 새로운 키워드를 추가합니다.
+    
+    Args:
+        request: 추가 요청 정보
+            - keyword: 추가할 키워드
+            - use_yn: 활성화 상태 (Y/N, 기본값: Y)
+        current_user: 현재 사용자 (인증 필요)
+    
+    Returns:
+        AutoCompleteAddResponse: 추가 결과
+    
+    Raises:
+        HTTPException: 키워드 추가 중 오류 발생 시
+    """
+    try:
+        logger.info(f"자동완성 키워드 추가 요청 - 사용자: {current_user.get('username')}, 키워드: {request.keyword}")
+        
+        result = autocomplete_service.add_keyword(
+            keyword=request.keyword,
+            use_yn=request.use_yn
+        )
+        
+        return AutoCompleteAddResponse(
+            success=True,
+            message="키워드가 성공적으로 추가되었습니다",
+            keyword=result["keyword"],
+            document_id=result["document_id"]
+        )
+        
+    except Exception as e:
+        logger.error(f"자동완성 키워드 추가 오류: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"자동완성 키워드 추가 실패: {str(e)}"
+        )
+
+
+@router.post("/typo-correction", response_model=TypoCorrectionResult)
+async def correct_typo(
+    query: TypoCorrectionQuery,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    텍스트 오타 교정 제안을 가져옵니다.
+    
+    Elasticsearch term suggester를 사용하여
+    입력된 텍스트의 오타를 교정한 제안을 제공합니다.
+    
+    Args:
+        query: 오타 교정 쿼리 매개변수
+            - text: 교정할 텍스트
+            - size: 반환할 제안 개수 (기본값: 10)
+            - max_edits: 최대 편집 거리 (1 또는 2, 기본값: 2)
+            - min_word_length: 제안할 최소 단어 길이 (기본값: 8)
+            - prefix_length: 일치해야 하는 접두사 길이 (기본값: 2)
+        current_user: 현재 사용자 (인증 필요)
+    
+    Returns:
+        TypoCorrectionResult: 오타 교정 결과
+    
+    Raises:
+        HTTPException: 오타 교정 처리 중 오류 발생 시
+    """
+    try:
+        import time
+        start_time = time.time()
+        
+        logger.info(f"오타 교정 요청 - 사용자: {current_user.get('username')}, 텍스트: {query.text}")
+        
+        corrections = typo_correction_service.get_corrections(
+            text=query.text,
+            size=query.size,
+            max_edits=query.max_edits,
+            min_word_length=query.min_word_length,
+            prefix_length=query.prefix_length
+        )
+        
+        took_ms = int((time.time() - start_time) * 1000)
+        
+        # TypoSuggestion 객체로 변환
+        suggestions = [
+            TypoSuggestion(
+                text=item["text"],
+                score=item["score"],
+                freq=item["freq"]
+            )
+            for item in corrections
+        ]
+        
+        return TypoCorrectionResult(
+            success=True,
+            message="오타 교정 완료",
+            original_text=query.text,
+            suggestions=suggestions,
+            took_ms=took_ms
+        )
+        
+    except Exception as e:
+        logger.error(f"오타 교정 오류: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"오타 교정 실패: {str(e)}"
+        )
+
+
+@router.post("/typo-correction/add", response_model=TypoCorrectionAddResponse)
+async def add_typo_correction_keyword(
+    request: TypoCorrectionAddRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    오타 교정용 키워드를 추가합니다.
+    
+    ds_correct_typo 인덱스에 새로운 키워드를 추가합니다.
+    
+    Args:
+        request: 추가 요청 정보
+            - keyword: 추가할 키워드
+            - category: 카테고리 (선택)
+            - category_id: 카테고리 ID (선택)
+        current_user: 현재 사용자 (인증 필요)
+    
+    Returns:
+        TypoCorrectionAddResponse: 추가 결과
+    
+    Raises:
+        HTTPException: 키워드 추가 중 오류 발생 시
+    """
+    try:
+        logger.info(f"오타 교정 키워드 추가 요청 - 사용자: {current_user.get('username')}, 키워드: {request.keyword}")
+        
+        result = typo_correction_service.add_keyword(
+            keyword=request.keyword,
+            category=request.category,
+            category_id=request.category_id
+        )
+        
+        return TypoCorrectionAddResponse(
+            success=True,
+            message="오타 교정 키워드가 성공적으로 추가되었습니다",
+            keyword=result["keyword"],
+            document_id=result["document_id"]
+        )
+        
+    except Exception as e:
+        logger.error(f"오타 교정 키워드 추가 오류: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"오타 교정 키워드 추가 실패: {str(e)}"
         )

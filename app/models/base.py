@@ -6,7 +6,7 @@
 """
 
 from pydantic import BaseModel as PydanticBaseModel, Field
-from typing import Optional, Any, Dict
+from typing import Optional, Any, Dict, List
 from datetime import datetime
 
 
@@ -28,12 +28,38 @@ class TimestampMixin(BaseModel):
 
 
 class ResponseModel(BaseModel):
-    """\n    표준 API 응답 모델.\n\n    API에서 공통적으로 사용되는 응답 형식을 정의합니다.\n    성공 여부, 메시지, 데이터, 오류 정보를 포함합니다.\n    """
+    """기본 응답 모델"""
+    success: bool = Field(default=True, description="성공 여부")
+    message: str = Field(default="요청이 성공적으로 처리되었습니다", description="응답 메시지")
+    
+    model_config = {
+        "from_attributes": True,
+        "json_schema_extra": {
+            "example": {
+                "success": True,
+                "message": "요청이 성공적으로 처리되었습니다"
+            }
+        }
+    }
 
-    success: bool = True
-    message: Optional[str] = None
-    data: Optional[Any] = None
-    errors: Optional[Dict[str, Any]] = None
+
+class ErrorResponse(BaseModel):
+    """오류 응답 모델"""
+    success: bool = Field(default=False, description="성공 여부")
+    message: str = Field(..., description="오류 메시지")
+    error_code: Optional[str] = Field(default=None, description="오류 코드")
+    details: Optional[Any] = Field(default=None, description="상세 정보")
+    
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "success": False,
+                "message": "요청 처리 중 오류가 발생했습니다",
+                "error_code": "INTERNAL_ERROR",
+                "details": None
+            }
+        }
+    }
 
 
 class PaginationParams(BaseModel):
@@ -48,21 +74,22 @@ class PaginationParams(BaseModel):
         return (self.page - 1) * self.size
 
 
-class PaginatedResponse(BaseModel):
-    """\n    페이지네이션 응답 모델.\n\n    페이지네이션이 적용된 데이터와 함께 총 개수, 현재 페이지,\n    전체 페이지 수 등의 메타데이터를 포함한 응답 모델입니다.\n    """
-
-    total: int
-    page: int
-    size: int
-    pages: int
-    items: list
-
-    @classmethod
-    def create(cls, items: list, total: int, page: int, size: int):
-        return cls(
-            items=items,
-            total=total,
-            page=page,
-            size=size,
-            pages=(total + size - 1) // size
-        )
+class PaginatedResponse(ResponseModel):
+    """페이지네이션 응답 모델"""
+    total: int = Field(..., description="전체 개수")
+    page: int = Field(..., description="현재 페이지")
+    size: int = Field(..., description="페이지 크기")
+    pages: int = Field(..., description="전체 페이지 수")
+    
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "success": True,
+                "message": "데이터 조회 완료",
+                "total": 100,
+                "page": 1,
+                "size": 10,
+                "pages": 10
+            }
+        }
+    }

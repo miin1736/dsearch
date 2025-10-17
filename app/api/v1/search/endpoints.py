@@ -1,20 +1,45 @@
 """
 검색 API 엔드포인트 모듈
 """
-
-from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query, Path, status, File, UploadFile
-from fastapi.responses import FileResponse, StreamingResponse
 import logging
+from typing import List, Optional
+from fastapi import APIRouter, Depends, HTTPException, Query, Path, status
+from fastapi.responses import FileResponse, StreamingResponse
+import io
+import json
+from datetime import datetime
+import time
 
-from app.core.security import get_current_user
+from app.core.security import get_current_user, get_current_user_optional
 from app.models.search import (
-    SearchQuery, SearchResult, VectorSearchQuery, SimilarDocumentQuery,
-    AutoCompleteQuery, AutoCompleteResult, DocumentModel, AutoCompleteAddRequest,
-    AutoCompleteAddResponse, TypoCorrectionQuery, TypoSuggestion, TypoCorrectionResult,
-    TypoCorrectionAddRequest, TypoCorrectionAddResponse
+    SearchQuery,
+    SearchResult,
+    DocumentModel,
+    VectorSearchRequest,
+    AutocompleteRequest,
+    AutocompleteResponse,
+    SearchSuggestionsResponse,
+    DocumentDetail,
+    DocumentResponse,
+    SimilarDocumentsRequest,
+    SimilarDocumentsResponse,
+    CategoryInfo,
+    CategoriesResponse,
+    DocumentDownloadInfo,
+    ExportRequest,
+    SearchStatsResponse,
+    AutoCompleteAddRequest,
+    AutoCompleteAddResponse,
+    TypoCorrectionQuery,
+    TypoCorrectionResult,
+    TypoCorrectionAddRequest,
+    TypoCorrectionAddResponse,
+    AISearchRequest,
+    AISearchResponse,
+    HybridSearchRequest,
+    EnhancedSearchStatsResponse
 )
-from app.models.base import ResponseModel, PaginatedResponse
+
 from app.services.search import SearchService, VectorService
 from app.services.search.text_analyzer import TextAnalyzer
 from app.utils.file_handler import FileHandler
@@ -74,7 +99,7 @@ async def search_documents(
 
 @router.post("/vector", response_model=SearchResult)
 async def vector_search(
-    query: VectorSearchQuery,
+    query: VectorSearchRequest,
     current_user: dict = Depends(get_current_user)
 ):
     """
@@ -83,7 +108,7 @@ async def vector_search(
     텍스트를 벡터로 변환하여 의미적 유사성을 기반으로 문서를 검색합니다.
 
     Args:
-        query (VectorSearchQuery): 벡터 검색 쿼리 매개변수
+        query (VectorSearchRequest): 벡터 검색 쿼리 매개변수
         current_user (dict): 현재 인증된 사용자 정보
 
     Returns:
@@ -153,9 +178,9 @@ async def find_similar_documents(
         )
 
 
-@router.post("/autocomplete", response_model=AutoCompleteResult)
+@router.post("/autocomplete", response_model=AutocompleteResponse)
 async def get_autocomplete_suggestions(
-    query: AutoCompleteQuery,
+    query: AutocompleteRequest,
     current_user: dict = Depends(get_current_user)
 ):
     """
@@ -164,11 +189,11 @@ async def get_autocomplete_suggestions(
     입력된 접두사를 기반으로 가능한 검색어 후보들을 제공합니다.
 
     Args:
-        query (AutoCompleteQuery): 자동완성 쿼리 매개변수
+        query (AutocompleteRequest): 자동완성 쿼리 매개변수
         current_user (dict): 현재 인증된 사용자 정보
 
     Returns:
-        AutoCompleteResult: 자동완성 제안 결과
+        AutocompleteResponse: 자동완성 제안 결과
 
     Raises:
         HTTPException: 자동완성 처리 중 오류 발생 시
@@ -185,7 +210,7 @@ async def get_autocomplete_suggestions(
 
         took_ms = int((time.time() - start_time) * 1000)
 
-        result = AutoCompleteResult(
+        result = AutocompleteResponse(
             suggestions=suggestions,
             took_ms=took_ms
         )
@@ -215,7 +240,7 @@ async def get_search_suggestions(
         current_user (dict): 현재 인증된 사용자 정보
 
     Returns:
-        ResponseModel: 교정된 검색 제안 결과
+        SearchSuggestionsResponse: 교정된 검색 제안 결과
 
     Raises:
         HTTPException: 제안 생성 중 오류 발생 시
@@ -223,7 +248,7 @@ async def get_search_suggestions(
     try:
         suggestions = await text_analyzer.suggest_corrections(query)
 
-        return ResponseModel(
+        return SearchSuggestionsResponse(
             success=True,
             data={
                 "query": query,
@@ -254,7 +279,7 @@ async def get_document(
         current_user (dict): 현재 인증된 사용자 정보
 
     Returns:
-        DocumentModel: 문서 내용 (하이라이트 적용됨)
+        DocumentDetail: 문서 내용 (하이라이트 적용됨)
 
     Raises:
         HTTPException: 문서를 찾을 수 없거나 처리 중 오류 발생 시
@@ -357,7 +382,7 @@ async def get_categories(
         current_user (dict): 현재 인증된 사용자 정보
 
     Returns:
-        ResponseModel: 사용 가능한 카테고리 목록
+        CategoriesResponse: 사용 가능한 카테고리 목록
 
     Raises:
         HTTPException: 카테고리 조회 중 오류 발생 시
@@ -365,7 +390,7 @@ async def get_categories(
     try:
         categories = await search_service.get_categories()
 
-        return ResponseModel(
+        return CategoriesResponse(
             success=True,
             data={"categories": categories}
         )
@@ -389,7 +414,7 @@ async def get_search_stats(
         current_user (dict): 현재 인증된 사용자 정보
 
     Returns:
-        ResponseModel: 검색 통계 데이터
+        SearchStatsResponse: 검색 통계 데이터
 
     Raises:
         HTTPException: 통계 조회 중 오류 발생 시
@@ -397,7 +422,7 @@ async def get_search_stats(
     try:
         stats = await search_service.get_search_stats()
 
-        return ResponseModel(
+        return SearchStatsResponse(
             success=True,
             data=stats
         )
@@ -413,7 +438,7 @@ async def get_search_stats(
 @router.post("/export")
 async def export_search_results(
     query: SearchQuery,
-    format: str = Query(default="csv", regex="^(csv|xlsx|json)$"),
+    format: str = Query(default="csv", pattern="^(csv|xlsx|json)$"),
     current_user: dict = Depends(get_current_user)
 ):
     """

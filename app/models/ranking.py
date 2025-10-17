@@ -7,9 +7,18 @@ from pydantic import BaseModel, Field
 
 
 class RankingSearchRequest(BaseModel):
-    """인기 검색어 요청 모델"""
-    howRequestDays: int = Field(default=7, description="조회할 일수")
-    howRequestTopN: int = Field(default=10, description="상위 N개 검색어")
+    """검색어 랭킹 요청 모델"""
+    howRequestDays: int = Field(default=7, ge=1, le=365, description="조회 기간(일)")
+    howRequestTopN: int = Field(default=10, ge=1, le=100, description="상위 N개")
+    
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "howRequestDays": 7,
+                "howRequestTopN": 10
+            }
+        }
+    }
 
 
 class RankingDocumentRequest(BaseModel):

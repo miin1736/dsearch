@@ -12,7 +12,7 @@ from .batch.endpoints import router as batch_router
 from .ml.endpoints import router as ml_router
 from .admin.endpoints import router as admin_router
 
-api_router = APIRouter(prefix="/api/v1")
+api_router = APIRouter()
 
 # 라우터 등록
 api_router.include_router(auth_router, prefix="/auth", tags=["auth"])

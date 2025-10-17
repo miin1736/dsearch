@@ -18,21 +18,22 @@ class TextAnalyzer:
 
     def __init__(self):
         self.detail_search_pattern = re.compile(r'[\"]{1}([^\"]*)[\"]{1}')
+        self.es_client = elasticsearch_service.get_client()
 
     async def analyze_query(self, query: str) -> str:
-        """Analyze and clean query text."""
+        """쿼리를 분석하여 정제합니다."""
         try:
-            # Remove extra whitespace
-            cleaned_query = re.sub(r'\s+', ' ', query.strip())
-
-            # Handle Korean text normalization if needed
-            # This is a placeholder for more sophisticated Korean text processing
-
-            return cleaned_query
-
+            # 예시: Elasticsearch analyzer 사용
+            analyzed = self.es_client.indices.analyze(
+                index=settings.ELASTICSEARCH_INDEX,
+                analyzer="standard",
+                text=query
+            )
+            tokens = [token['token'] for token in analyzed['tokens']]
+            return ' '.join(tokens)
         except Exception as e:
-            logger.error(f"Error analyzing query: {e}")
-            return query
+            logger.error(f"Query analysis failed: {e}")
+            return query  # 원본 반환
 
     async def extract_phrases(self, query: str) -> List[str]:
         """Extract quoted phrases from query."""

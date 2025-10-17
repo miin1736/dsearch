@@ -20,8 +20,9 @@ aiofiles==23.2.1
 
 # Configuration and utilities
 python-dotenv==1.0.0
-pydantic==2.5.0
+pydantic-settings==2.11.0
+pydantic==2.7.0
 pathlib2==2.3.7  # For older Python versions, if needed
-
-# Logging and security (if custom extensions used)
-# Note: Standard library modules like logging are not listed here
+apscheduler==3.11.0
+httpx==0.24.1  # 추가: httpx 버전 고정 (OpenAI 호환)
+python-jose[cryptography]==3.3.0

@@ -40,5 +40,55 @@ class VectorService:
             logger.error(f"Vector search failed: {e}")
             return []
 
+    async def index_documents_for_vector_search(self, source_index: str, target_index: str) -> int:
+        """
+        문서를 벡터로 변환하여 인덱싱합니다.
+
+        Args:
+            source_index: 소스 인덱스명
+            target_index: 타겟 벡터 인덱스명
+
+        Returns:
+            int: 인덱싱된 문서 수
+        """
+        try:
+            client = elasticsearch_service.get_client()
+            query = {"query": {"match_all": {}}, "size": 10000}
+
+            # 소스 문서 검색
+            response = client.search(index=source_index, body=query)
+
+            indexed_count = 0
+            for hit in response.get("hits", {}).get("hits", []):
+                doc_id = hit["_id"]
+                source = hit["_source"]
+                text = source.get("text", "")
+
+                if text:
+                    # 텍스트를 벡터로 변환
+                    embeddings = self.model.encode(text)
+
+                    vector_doc = {
+                        "full_text": text,
+                        "vector": embeddings.tolist(),
+                        "created": source.get("created", ""),
+                        "category": source.get("category", "")
+                    }
+
+                    # 벡터 인덱스에 저장
+                    await elasticsearch_service.index_document(
+                        index=target_index,
+                        doc_id=doc_id,
+                        document=vector_doc
+                    )
+
+                    indexed_count += 1
+
+            return indexed_count
+
+        except Exception as e:
+            logger.error(f"Vector indexing error: {e}")
+            return 0
+
 # Global instance
 vector_service = VectorService()

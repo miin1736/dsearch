@@ -9998,3 +9998,7 @@ venv3.11/lib/python3.11/site-packages/scipy-1.16.2.dist-info/LICENSE.txt
 venv3.11/lib/python3.11/site-packages/scipy-1.16.2.dist-info/METADATA
 venv3.11/lib/python3.11/site-packages/scipy-1.16.2.dist-info/RECORD
 venv3.11/lib/python3.11/site-packages/scipy-1.16.2.dist-info/WHEEL
+__pycache__
+*.pyc
+logs
+*pid
